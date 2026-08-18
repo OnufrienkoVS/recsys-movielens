@@ -4,4 +4,5 @@ __pycache__/
 data/
 *.ipynb_checkpoints/
 .venv/
-models/
+models/*
+!models/svd_model.pkl
