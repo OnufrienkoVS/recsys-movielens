@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.schemas import ModelsResponse, ModelInfo
-from app.dependencies import get_recommender
+from app.schemas import ModelsResponse, ModelInfo, ModelSwitchRequest, ModelSwitchResponse
+from app.dependencies import get_recommender, get_recommender_or_raise
 from app.recommender import MovieRecommender
+from app.config import settings
 
 router = APIRouter(prefix="/models", tags=["models"])
 
@@ -58,3 +59,49 @@ async def list_models(
         available_models=available_models,
         current_model=current_model
     )
+
+@router.post("/switch", response_model=ModelSwitchResponse)
+async def switch_model(
+    request: ModelSwitchRequest,
+    recommender: MovieRecommender = Depends(get_recommender_or_raise)
+):
+    """
+    Переключает текущую модель
+    """
+    model_path = settings.get_model_path(request.model_id)
+    if model_path is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Модель '{request.model_id}' не найдена"
+        )
+
+    try:
+        previous_model = recommender.model_type
+        recommender.switch_model(model_path, request.model_id)
+
+        return ModelSwitchResponse(
+            status="success",
+            message=f"Модель переключена на {request.model_id}",
+            previous_model=previous_model,
+            current_model=request.model_id
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/current", response_model=dict)
+async def get_current_model(
+    recommender: MovieRecommender = Depends(get_recommender)
+):
+    """Возвращает информацию о текущей модели"""
+    if recommender is None or not recommender.is_loaded():
+        return {
+            "status": "no_model_loaded",
+            "message": "Модель не загружена"
+        }
+
+    return {
+        "status": "loaded",
+        "model_type": recommender.model_type,
+        "model_class": type(recommender.model).__name__ if recommender.model else None
+    }

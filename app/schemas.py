@@ -28,6 +28,17 @@ class RecommendationRequest(BaseModel):
             }
         }
 
+class ModelSwitchRequest(BaseModel):
+    """Запрос на переключение модели"""
+    model_id: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "model_id": "svd_model"
+            }
+        }
+
 
 class PredictionResponse(BaseModel):
     """Ответ с предсказанной оценкой"""
@@ -66,3 +77,10 @@ class HealthResponse(BaseModel):
     n_ratings: Optional[int] = None
     model_type: Optional[str] = None
     n_users: Optional[int] = None
+
+class ModelSwitchResponse(BaseModel):
+    """Ответ на переключение модели"""
+    status: str
+    message: str
+    previous_model: str
+    current_model: str

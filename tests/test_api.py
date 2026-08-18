@@ -239,6 +239,112 @@ def test_recommend_unknown_user():
         return None
 
 
+def test_switch_model():
+    """Тест переключения модели"""
+    print("\n" + "=" * 60)
+    print("9. Тест /models/switch (переключение модели)")
+    print("=" * 60)
+
+    try:
+        response = requests.get(f"{BASE_URL}/models", timeout=5)
+        models_data = response.json()
+        available_models = [m['model_id'] for m in models_data.get('available_models', [])]
+        print(f"Доступные модели: {available_models}")
+
+        if len(available_models) < 2:
+            print("⚠️ Доступна только одна модель, проверка переключения пропущена")
+            return {"status": "skipped", "reason": "only one model available"}
+
+        current_model = models_data.get('current_model')
+        target_model = next((m for m in available_models if m != current_model), None)
+
+        if target_model is None:
+            print("⚠️ Нет модели для переключения")
+            return {"status": "skipped", "reason": "no alternative model"}
+
+        print(f"Текущая модель: {current_model}")
+        print(f"Переключаем на: {target_model}")
+
+        payload = {"model_id": target_model}
+        response = requests.post(
+            f"{BASE_URL}/models/switch",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+
+        print(f"Статус: {response.status_code}")
+        data = response.json()
+        print(f"Ответ: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
+        assert response.status_code == 200
+        assert data['status'] == 'success'
+        assert data['current_model'] == target_model
+        assert data['previous_model'] == current_model
+
+        print(f"✅ Модель переключена на {target_model}")
+        return data
+
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        return None
+
+
+def test_switch_model_invalid():
+    """Тест переключения на несуществующую модель"""
+    print("\n" + "=" * 60)
+    print("10. Тест /models/switch (несуществующая модель)")
+    print("=" * 60)
+
+    payload = {"model_id": "non_existent_model"}
+
+    try:
+        response = requests.post(
+            f"{BASE_URL}/models/switch",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+
+        print(f"Статус: {response.status_code}")
+        data = response.json()
+        print(f"Ответ: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
+        assert response.status_code == 404
+        print("✅ Несуществующая модель корректно отклонена")
+        return data
+
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        return None
+
+
+def test_current_model():
+    """Тест получения информации о текущей модели"""
+    print("\n" + "=" * 60)
+    print("11. Тест /models/current")
+    print("=" * 60)
+
+    try:
+        response = requests.get(f"{BASE_URL}/models/current", timeout=5)
+        print(f"Статус: {response.status_code}")
+        data = response.json()
+        print(f"Ответ: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
+        assert response.status_code == 200
+        if data.get('status') == 'loaded':
+            assert 'model_type' in data
+            print(f"✅ Текущая модель: {data['model_type']}")
+        else:
+            print(f"⚠️ Модель не загружена: {data.get('message')}")
+
+        return data
+
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        return None
+
+
 def run_all_tests():
     """Запуск всех тестов"""
     print("\n" + "=" * 60)
@@ -264,7 +370,10 @@ def run_all_tests():
         'predict_unknown': test_predict_unknown_user(),
         'recommend': test_recommend(),
         'recommend_large': test_recommend_large_n(),
-        'recommend_unknown': test_recommend_unknown_user()
+        'recommend_unknown': test_recommend_unknown_user(),
+        'switch_model': test_switch_model(),
+        'switch_invalid': test_switch_model_invalid(),
+        'current_model': test_current_model()
     }
     
     # Итоги

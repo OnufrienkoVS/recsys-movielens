@@ -246,3 +246,41 @@ class MovieRecommender:
     def model_name(self) -> str:
         """Возвращает имя модели"""
         return self.model_type
+
+    def switch_model(self, model_path: Path, model_type: str) -> "MovieRecommender":
+        """Переключает на другую модель"""
+        if not model_path.exists():
+            raise FileNotFoundError(f"Модель не найдена: {model_path}")
+
+        old_model = self.model
+        old_type = self.model_type
+
+        try:
+            self.model_path = model_path
+            self.model_type = model_type
+            self._loaded = False
+
+            if model_path.suffix == '.pt':
+                self._load_lightgcn()
+            else:
+                self._load_surprise_model()
+
+            self._loaded = True
+            print(f"✅ Переключено на модель: {model_type}")
+            return self
+
+        except Exception as e:
+            self.model = old_model
+            self.model_type = old_type
+            self._loaded = True
+            raise RuntimeError(f"Ошибка переключения модели: {e}")
+
+    def get_current_model_info(self) -> dict:
+        """Возвращает информацию о текущей модели"""
+        return {
+            'model_type': self.model_type,
+            'model_path': str(self.model_path) if self.model_path else None,
+            'is_loaded': self.is_loaded(),
+            'metrics': self.metrics,
+            'model_class': type(self.model).__name__ if self.model else None
+        }
