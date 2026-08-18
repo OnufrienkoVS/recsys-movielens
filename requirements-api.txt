@@ -1,12 +1,14 @@
+# Оптимизация библиотек для docker
 # Core
-fastapi==0.141.1
-uvicorn==0.52.3
-pydantic==2.13.4
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
 
 # Data processing
-pandas==3.0.5
-numpy==2.5.1
+pandas==2.2.3
+numpy==1.26.4
 
 # ML models
 scikit-surprise==1.1.5
-torch==2.13.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1
